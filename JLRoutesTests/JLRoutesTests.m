@@ -23,6 +23,9 @@
 	NSString *value = [[parameter allValues] lastObject];\
 	XCTAssertEqualObjects(lastMatch[key], value, @"Exact parameter pair not found");}
 
+#define JLValidateWildcardComponent(component)\
+	XCTAssertTrue([lastMatch[kJLRouteWildcardComponentsKey] containsObject:component], @"Wildcard component did not match")
+
 #define JLValidateAnyRouteMatched()\
 	XCTAssertNotNil(lastMatch, @"Expected any route to match")
 
@@ -447,6 +450,7 @@ static NSDictionary *lastMatch = nil;
 	[[JLRoutes routesForScheme:@"optional"] addRoute:@"/optional1(/:opParam1)" handler:self.defaultHandler];
 	[[JLRoutes routesForScheme:@"optional"] addRoute:@"/optional2(/:opParam1(/:opParam2))" handler:self.defaultHandler];
 	[[JLRoutes routesForScheme:@"optional"] addRoute:@"/optional3(/:opParam1(/foo/bar/:opParam2/baz(/thing/:opParam3)))" handler:self.defaultHandler];
+	[[JLRoutes routesForScheme:@"optional"] addRoute:@"/optional4(/:opParam1(/:opParam2/*))" handler:self.defaultHandler];
 	
 	// test routes with a single optional parameter
 	[self route:@"optional://optional1"];
@@ -520,6 +524,29 @@ static NSDictionary *lastMatch = nil;
 	JLValidateParameter(@{@"opParam1": @"yay"});
 	JLValidateParameter(@{@"opParam2": @"boo"});
 	JLValidateParameter(@{@"opParam3": @"mars"});
+	
+	[self route:@"optional://optional4/test"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional4");
+	JLValidateParameterCount(1);
+	JLValidateParameter(@{@"opParam1": @"test"});
+	
+	[self route:@"optional://optional4/test/one"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional4");
+	JLValidateParameterCountIncludingWildcard(2);
+	JLValidateParameter(@{@"opParam1": @"test"});
+	JLValidateParameter(@{@"opParam2": @"one"});
+	
+	[self route:@"optional://optional4/test/one/two/three/four"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional4");
+	JLValidateParameterCountIncludingWildcard(2);
+	JLValidateParameter(@{@"opParam1": @"test"});
+	JLValidateParameter(@{@"opParam2": @"one"});
+	JLValidateWildcardComponent(@"two");
+	JLValidateWildcardComponent(@"three");
+	JLValidateWildcardComponent(@"four");
 	
 	[JLRoutes unregisterRouteScheme:@"optional"];
 }

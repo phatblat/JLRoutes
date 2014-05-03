@@ -92,10 +92,14 @@ static BOOL shouldDecodePlusSymbols = YES;
 	BOOL routeContainsWildcard = !NSEqualRanges([self.pattern rangeOfString:@"*"], NSMakeRange(NSNotFound, 0));
 	BOOL patternContainsOptionalComponents = [self.optionalComponentSequences count] > 0;
 	
+	NSArray *lastOptionalSequence = [self.optionalComponentSequences lastObject];
+	BOOL isLastOptionalComponentWildcard = [[lastOptionalSequence lastObject] isEqualToString:@"*"];
+	
 	// if theres a component count mismatch, but this pattern has optional components, figure out if it could still be a match
 	if (!componentCountsEqual && patternContainsOptionalComponents) {
 		NSUInteger componentMismatchCount = [URLComponents count] - [self.patternPathComponents count];
-		if (componentMismatchCount <= self.optionalComponentsCount) {
+		
+		if (componentMismatchCount <= self.optionalComponentsCount || isLastOptionalComponentWildcard) {
 			componentCountsEqual = YES;
 		}
 	}
@@ -131,7 +135,7 @@ static BOOL shouldDecodePlusSymbols = YES;
 				optionalComponentsIndex++;
 			}
 			
-			if (componentMismatchCount == 0) {
+			if (componentMismatchCount == 0 || isLastOptionalComponentWildcard) {
 				patternComponents = [patternComponents arrayByAddingObjectsFromArray:optionalComponents];
 			} else {
 				// couldn't resolve the mismatch in the above while loop - this isn't a match

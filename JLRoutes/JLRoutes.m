@@ -40,12 +40,14 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 @implementation NSString (JLRoutes)
 
-- (NSString *)JLRoutes_URLDecodedString {
+- (NSString *)JLRoutes_URLDecodedString
+{
 	NSString *input = shouldDecodePlusSymbols ? [self stringByReplacingOccurrencesOfString:@"+" withString:@" " options:NSLiteralSearch range:NSMakeRange(0, self.length)] : self;
 	return [input stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
 }
 
-- (NSDictionary *)JLRoutes_URLParameterDictionary {
+- (NSDictionary *)JLRoutes_URLParameterDictionary
+{
 	NSMutableDictionary *parameters = [NSMutableDictionary dictionary];
 
 	if (self.length && [self rangeOfString:@"="].location != NSNotFound) {
@@ -80,7 +82,8 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 @implementation _JLRoute
 
-- (NSDictionary *)parametersForURL:(NSURL *)URL components:(NSArray *)URLComponents {
+- (NSDictionary *)parametersForURL:(NSURL *)URL components:(NSArray *)URLComponents
+{
 	NSDictionary *routeParameters = nil;
 	
 	if (!self.patternPathComponents) {
@@ -132,41 +135,44 @@ static BOOL shouldDecodePlusSymbols = YES;
 	return routeParameters;
 }
 
-
-- (NSString *)description {
+- (NSString *)description
+{
 	return [NSString stringWithFormat:@"JLRoute %@ (%@)", self.pattern, @(self.priority)];
 }
-
 
 @end
 
 
 @implementation JLRoutes
 
-- (id)init {
+- (id)init
+{
 	if ((self = [super init])) {
 		self.routes = [NSMutableArray array];
 	}
 	return self;
 }
 
-+ (void)setShouldDecodePlusSymbols:(BOOL)shouldDecode {
++ (void)setShouldDecodePlusSymbols:(BOOL)shouldDecode
+{
 	shouldDecodePlusSymbols = shouldDecode;
 }
 
-+ (BOOL)shouldDecodePlusSymbols {
++ (BOOL)shouldDecodePlusSymbols
+{
 	return shouldDecodePlusSymbols;
 }
 
 #pragma mark -
 #pragma mark Routing API
 
-+ (instancetype)globalRoutes {
++ (instancetype)globalRoutes
+{
 	return [self routesForScheme:kJLRoutesGlobalNamespaceKey];
 }
 
-
-+ (instancetype)routesForScheme:(NSString *)scheme {
++ (instancetype)routesForScheme:(NSString *)scheme
+{
 	JLRoutes *routesController = nil;
 	
 	static dispatch_once_t onceToken;
@@ -185,23 +191,23 @@ static BOOL shouldDecodePlusSymbols = YES;
 	return routesController;
 }
 
-
-+ (void)addRoute:(NSString *)routePattern handler:(BOOL (^)(NSDictionary *parameters))handlerBlock {
++ (void)addRoute:(NSString *)routePattern handler:(BOOL (^)(NSDictionary *parameters))handlerBlock
+{
 	[[self globalRoutes] addRoute:routePattern handler:handlerBlock];
 }
 
-
-+ (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock {
++ (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock
+{
 	[[self globalRoutes] addRoute:routePattern priority:priority handler:handlerBlock];
 }
 
-
-- (void)addRoute:(NSString *)routePattern handler:(BOOL (^)(NSDictionary *parameters))handlerBlock {
+- (void)addRoute:(NSString *)routePattern handler:(BOOL (^)(NSDictionary *parameters))handlerBlock
+{
 	[self addRoute:routePattern priority:0 handler:handlerBlock];
 }
 
-
-- (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock {
+- (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock
+{
 	_JLRoute *route = [[_JLRoute alloc] init];
 	route.pattern = routePattern;
 	route.priority = priority;
@@ -229,13 +235,13 @@ static BOOL shouldDecodePlusSymbols = YES;
 	}
 }
 
-
-+ (void)removeRoute:(NSString *)routePattern {
++ (void)removeRoute:(NSString *)routePattern
+{
 	[[JLRoutes globalRoutes] removeRoute:routePattern];
 }
 
-
-- (void)removeRoute:(NSString *)routePattern {
+- (void)removeRoute:(NSString *)routePattern
+{
 	if (![routePattern hasPrefix:@"/"]) {
 		routePattern = [NSString stringWithFormat:@"/%@", routePattern];
 	}
@@ -256,40 +262,43 @@ static BOOL shouldDecodePlusSymbols = YES;
 	}
 }
 
-
-+ (void)removeAllRoutes {
++ (void)removeAllRoutes
+{
 	[[JLRoutes globalRoutes] removeAllRoutes];
 }
 
-
-- (void)removeAllRoutes {
+- (void)removeAllRoutes
+{
 	[self.routes removeAllObjects];
 }
 
-
-+ (void)unregisterRouteScheme:(NSString *)scheme {
++ (void)unregisterRouteScheme:(NSString *)scheme
+{
 	[routeControllersMap removeObjectForKey:scheme];
 }
 
-
-+ (BOOL)routeURL:(NSURL *)URL {
++ (BOOL)routeURL:(NSURL *)URL
+{
 	return [self routeURL:URL withParameters:nil executeRouteBlock:YES];
 }
 
-+ (BOOL)routeURL:(NSURL *)URL withParameters:(NSDictionary *)parameters {
++ (BOOL)routeURL:(NSURL *)URL withParameters:(NSDictionary *)parameters
+{
     return [self routeURL:URL withParameters:parameters executeRouteBlock:YES];
 }
 
-
-+ (BOOL)canRouteURL:(NSURL *)URL {
++ (BOOL)canRouteURL:(NSURL *)URL
+{
     return [self routeURL:URL withParameters:nil executeRouteBlock:NO];
 }
 
-+ (BOOL)canRouteURL:(NSURL *)URL withParameters:(NSDictionary *)parameters {
++ (BOOL)canRouteURL:(NSURL *)URL withParameters:(NSDictionary *)parameters
+{
     return [self routeURL:URL withParameters:parameters executeRouteBlock:NO];
 }
 
-+ (BOOL)routeURL:(NSURL *)URL withParameters:(NSDictionary *)parameters executeRouteBlock:(BOOL)execute {
++ (BOOL)routeURL:(NSURL *)URL withParameters:(NSDictionary *)parameters executeRouteBlock:(BOOL)execute
+{
 	if (!URL) {
 		return NO;
 	}
@@ -300,31 +309,36 @@ static BOOL shouldDecodePlusSymbols = YES;
 	return [self routeURL:URL withController:routesController parameters:parameters executeBlock:execute];
 }
 
-- (BOOL)routeURL:(NSURL *)URL {
+- (BOOL)routeURL:(NSURL *)URL
+{
 	return [[self class] routeURL:URL withController:self];
 }
 
-- (BOOL)routeURL:(NSURL *)URL withParameters:(NSDictionary *)parameters {
+- (BOOL)routeURL:(NSURL *)URL withParameters:(NSDictionary *)parameters
+{
 	return [[self class] routeURL:URL withController:self parameters:parameters];
 }
 
-- (BOOL)canRouteURL:(NSURL *)URL {
+- (BOOL)canRouteURL:(NSURL *)URL
+{
 	return [[self class] routeURL:URL withController:self parameters:nil executeBlock:NO];
 }
 
-- (BOOL)canRouteURL:(NSURL *)URL withParameters:(NSDictionary *)parameters {
+- (BOOL)canRouteURL:(NSURL *)URL withParameters:(NSDictionary *)parameters
+{
 	return [[self class] routeURL:URL withController:self parameters:parameters executeBlock:NO];
 }
 
 #pragma mark -
 #pragma mark Debugging Aids
 
-- (NSString *)description {
+- (NSString *)description
+{
 	return [self.routes description];
 }
 
-
-+ (NSString *)description {
++ (NSString *)description
+{
 	NSMutableString *descriptionString = [NSMutableString stringWithString:@"\n"];
 	
 	for (NSString *routesNamespace in routeControllersMap) {
@@ -335,29 +349,31 @@ static BOOL shouldDecodePlusSymbols = YES;
 	return descriptionString;
 }
 
-
-+ (void)setVerboseLoggingEnabled:(BOOL)loggingEnabled {
++ (void)setVerboseLoggingEnabled:(BOOL)loggingEnabled
+{
 	verboseLoggingEnabled = loggingEnabled;
 }
 
-
-+ (BOOL)isVerboseLoggingEnabled {
++ (BOOL)isVerboseLoggingEnabled
+{
 	return verboseLoggingEnabled;
 }
-
 
 #pragma mark -
 #pragma mark Internal API
 
-+ (BOOL)routeURL:(NSURL *)URL withController:(JLRoutes *)routesController {
++ (BOOL)routeURL:(NSURL *)URL withController:(JLRoutes *)routesController
+{
     return [self routeURL:URL withController:routesController parameters:nil executeBlock:YES];
 }
 
-+ (BOOL)routeURL:(NSURL *)URL withController:(JLRoutes *)routesController parameters:(NSDictionary *)parameters {
++ (BOOL)routeURL:(NSURL *)URL withController:(JLRoutes *)routesController parameters:(NSDictionary *)parameters
+{
     return [self routeURL:URL withController:routesController parameters:parameters executeBlock:YES];
 }
 
-+ (BOOL)routeURL:(NSURL *)URL withController:(JLRoutes *)routesController parameters:(NSDictionary *)parameters executeBlock:(BOOL)executeBlock {
++ (BOOL)routeURL:(NSURL *)URL withController:(JLRoutes *)routesController parameters:(NSDictionary *)parameters executeBlock:(BOOL)executeBlock
+{
 	[self verboseLogWithFormat:@"Trying to route URL %@", URL];
 	BOOL didRoute = NO;
 	NSArray *routes = routesController.routes;
@@ -425,13 +441,13 @@ static BOOL shouldDecodePlusSymbols = YES;
 	return didRoute;
 }
 
-
-- (BOOL)isGlobalRoutesController {
+- (BOOL)isGlobalRoutesController
+{
 	return [self.namespaceKey isEqualToString:kJLRoutesGlobalNamespaceKey];
 }
 
-
-+ (void)verboseLogWithFormat:(NSString *)format, ... {
++ (void)verboseLogWithFormat:(NSString *)format, ...
+{
 	if (verboseLoggingEnabled && format) {
 		va_list argsList;
 		va_start(argsList, format);
@@ -448,7 +464,8 @@ static BOOL shouldDecodePlusSymbols = YES;
 #pragma mark -
 #pragma mark Subscripting
 
-- (void)setObject:(id)handlerBlock forKeyedSubscript:(NSString *)routePatten {
+- (void)setObject:(id)handlerBlock forKeyedSubscript:(NSString *)routePatten
+{
   [self addRoute:routePatten handler:handlerBlock];
 }
 

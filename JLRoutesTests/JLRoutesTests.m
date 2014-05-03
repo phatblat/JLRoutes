@@ -32,6 +32,9 @@
 #define JLValidatePattern(pattern)\
 	XCTAssertEqualObjects(lastMatch[kJLRoutePatternKey], pattern, @"Pattern did not match")
 
+#define JLValidatePatternPrefix(prefix)\
+	XCTAssertTrue([lastMatch[kJLRoutePatternKey] hasPrefix:prefix], @"Pattern prefix did not match")
+
 #define JLValidateScheme(scheme)\
 	XCTAssertEqualObjects(lastMatch[kJLRouteNamespaceKey], scheme, @"Scheme did not match")
 
@@ -52,7 +55,7 @@ static NSDictionary *lastMatch = nil;
 
 + (void)setUp
 {
-	[JLRoutes setVerboseLoggingEnabled:NO];
+	[JLRoutes setVerboseLoggingEnabled:YES];
 	[super setUp];
 }
 
@@ -437,6 +440,88 @@ static NSDictionary *lastMatch = nil;
     JLValidateParameter(@{@"userID": @"joel]levin"});
 	
 	[JLRoutes setShouldDecodePlusSymbols:oldDecodeSetting];
+}
+
+- (void)testOptionalParameters
+{
+	[[JLRoutes routesForScheme:@"optional"] addRoute:@"/optional1(/:opParam1)" handler:self.defaultHandler];
+	[[JLRoutes routesForScheme:@"optional"] addRoute:@"/optional2(/:opParam1(/:opParam2))" handler:self.defaultHandler];
+	[[JLRoutes routesForScheme:@"optional"] addRoute:@"/optional3(/:opParam1(/foo/bar/:opParam2/baz(/thing/:opParam3)))" handler:self.defaultHandler];
+	
+	// test routes with a single optional parameter
+	[self route:@"optional://optional1"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional1");
+	JLValidateParameterCount(0);
+	
+	[self route:@"optional://optional1/yay"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional1");
+	JLValidateParameterCount(1);
+	JLValidateParameter(@{@"opParam1": @"yay"});
+	
+	[self route:@"optional://optional1/yay/boo"];
+	JLValidateNoLastMatch();
+	
+	// test routes that have two optional parameters
+	[self route:@"optional://optional2"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional2");
+	JLValidateParameterCount(0);
+	
+	[self route:@"optional://optional2/yay"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional2");
+	JLValidateParameterCount(1);
+	JLValidateParameter(@{@"opParam1": @"yay"});
+	
+	[self route:@"optional://optional2/yay/boo"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional2");
+	JLValidateParameterCount(2);
+	JLValidateParameter(@{@"opParam1": @"yay"});
+	JLValidateParameter(@{@"opParam2": @"boo"});
+	
+	[self route:@"optional://optional2/yay/boo/bar"];
+	JLValidateNoLastMatch();
+	
+	// test really complex routes with more than two optional parameters and other require components intermixed
+	[self route:@"optional://optional3"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional3");
+	JLValidateParameterCount(0);
+	
+	[self route:@"optional://optional3/yay"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional3");
+	JLValidateParameterCount(1);
+	JLValidateParameter(@{@"opParam1": @"yay"});
+	
+	[self route:@"optional://optional3/yay/boo"];
+	JLValidateNoLastMatch();
+	
+	[self route:@"optional://optional3/yay/foo/bar/boo"];
+	JLValidateNoLastMatch();
+	
+	[self route:@"optional://optional3/yay/foo/bar/boo/baz"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional3");
+	JLValidateParameterCount(2);
+	JLValidateParameter(@{@"opParam1": @"yay"});
+	JLValidateParameter(@{@"opParam2": @"boo"});
+	
+	[self route:@"optional://optional3/yay/foo/bar/boo/baz/thing/mars"];
+	JLValidateNoLastMatch();
+	
+	[self route:@"optional://optional3/yay/foo/bar/boo/baz/thing/mars"];
+	JLValidateAnyRouteMatched();
+	JLValidatePatternPrefix(@"/optional3");
+	JLValidateParameterCount(3);
+	JLValidateParameter(@{@"opParam1": @"yay"});
+	JLValidateParameter(@{@"opParam2": @"boo"});
+	JLValidateParameter(@{@"opParam3": @"mars"});
+	
+	[JLRoutes unregisterRouteScheme:@"optional"];
 }
 
 @end

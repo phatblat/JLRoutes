@@ -11,6 +11,7 @@
  */
 
 #import "JLRoutes.h"
+#import "NSString+JLRoutesAdditions.h"
 
 
 static NSMutableDictionary *routeControllersMap = nil;
@@ -30,43 +31,6 @@ static BOOL shouldDecodePlusSymbols = YES;
 @end
 
 
-@interface NSString (JLRoutes)
-
-- (NSString *)JLRoutes_URLDecodedString;
-- (NSDictionary *)JLRoutes_URLParameterDictionary;
-
-@end
-
-
-@implementation NSString (JLRoutes)
-
-- (NSString *)JLRoutes_URLDecodedString
-{
-	NSString *input = shouldDecodePlusSymbols ? [self stringByReplacingOccurrencesOfString:@"+" withString:@" " options:NSLiteralSearch range:NSMakeRange(0, self.length)] : self;
-	return [input stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-}
-
-- (NSDictionary *)JLRoutes_URLParameterDictionary
-{
-	NSMutableDictionary *parameters = [NSMutableDictionary dictionary];
-
-	if (self.length && [self rangeOfString:@"="].location != NSNotFound) {
-		NSArray *keyValuePairs = [self componentsSeparatedByString:@"&"];
-		for (NSString *keyValuePair in keyValuePairs) {
-			NSArray *pair = [keyValuePair componentsSeparatedByString:@"="];
-			// don't assume we actually got a real key=value pair. start by assuming we only got @[key] before checking count
-			NSString *paramValue = pair.count == 2 ? pair[1] : @"";
-			// CFURLCreateStringByReplacingPercentEscapesUsingEncoding may return NULL
-			parameters[pair[0]] = [paramValue JLRoutes_URLDecodedString] ?: @"";
-		}
-	}
-
-	return parameters;
-}
-
-@end
-
-
 @interface _JLRoute : NSObject
 
 @property (nonatomic, weak) JLRoutes *parentRoutesController;
@@ -74,6 +38,8 @@ static BOOL shouldDecodePlusSymbols = YES;
 @property (nonatomic, strong) BOOL (^block)(NSDictionary *parameters);
 @property (nonatomic, assign) NSUInteger priority;
 @property (nonatomic, strong) NSArray *patternPathComponents;
+@property (nonatomic, strong) NSArray *optionalComponentSequences;
+@property (nonatomic, assign) NSUInteger optionalComponentsCount;
 
 - (NSDictionary *)parametersForURL:(NSURL *)URL components:(NSArray *)URLComponents;
 
@@ -87,19 +53,83 @@ static BOOL shouldDecodePlusSymbols = YES;
 	NSDictionary *routeParameters = nil;
 	
 	if (!self.patternPathComponents) {
-		self.patternPathComponents = [[self.pattern pathComponents] filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"NOT SELF like '/'"]];
+		NSString *patternString = self.pattern;
+		NSRange optionalRange = NSMakeRange(NSNotFound, NSNotFound);
+		optionalRange = [self.pattern JLRoutes_innermostRangeBetweenStartString:@"(" endString:@")"];
+		
+		if (optionalRange.location != NSNotFound) {
+			// this pattern contains optional parameter definitions
+			// for each 'sequence' of option params, store them in their own array within a wrapper array
+			//
+			// this is to handle routes like this: /test(/:optionalParam1(/:optionalParam2/foo(/:optionalParam3)))
+			// the idea is to take the above route and create this data structure:
+			// [[optionalParam1], [optionalParam2, foo], [optionalParam3]]
+			//
+			// this way we can require specific sequences (such as requiring both optionalParam2 and foo) without matching subsequent optional sections.
+			
+			NSMutableArray *optionalParamSequences = [NSMutableArray array];
+			NSMutableString *modifiedPatternString = [patternString mutableCopy];
+			
+			// loop until we run out of optional ranges (or hit a broken one)
+			while (optionalRange.location != NSNotFound) {
+				NSString *optionalSubstring = [modifiedPatternString substringWithRange:optionalRange];
+				NSArray *optionalComponents = [optionalSubstring JLRoutes_filteredPathComponents];
+				[optionalParamSequences insertObject:optionalComponents atIndex:0];
+				self.optionalComponentsCount += [optionalComponents count];
+				
+				[modifiedPatternString deleteCharactersInRange:NSMakeRange(optionalRange.location - 1, optionalRange.length + 2)];
+				optionalRange = [modifiedPatternString JLRoutes_innermostRangeBetweenStartString:@"(" endString:@")"];
+			}
+			
+			self.optionalComponentSequences = [NSArray arrayWithArray:optionalParamSequences]; // force immutability
+			patternString = [NSString stringWithString:modifiedPatternString]; // update the pattern string while also forcing immutability
+		}
+		self.patternPathComponents = [patternString JLRoutes_filteredPathComponents];
 	}
 	
-	// do a quick component count check to quickly eliminate incorrect patterns
-	BOOL componentCountEqual = self.patternPathComponents.count == URLComponents.count;
+	// gather facts
+	BOOL componentCountsEqual = self.patternPathComponents.count == URLComponents.count;
 	BOOL routeContainsWildcard = !NSEqualRanges([self.pattern rangeOfString:@"*"], NSMakeRange(NSNotFound, 0));
-	if (componentCountEqual || routeContainsWildcard) {
+	BOOL patternContainsOptionalComponents = [self.optionalComponentSequences count] > 0;
+	
+	// if theres a component count mismatch, but this pattern has optional components, figure out if it could still be a match
+	if (!componentCountsEqual && patternContainsOptionalComponents) {
+		NSUInteger componentMismatchCount = [URLComponents count] - [self.patternPathComponents count];
+		if (componentMismatchCount <= self.optionalComponentsCount) {
+			componentCountsEqual = YES;
+		}
+	}
+	
+	// if valid, move into identifying a match
+	if (componentCountsEqual || routeContainsWildcard) {
 		// now that we've identified a possible match, move component by component to check if it's a match
 		NSUInteger componentIndex = 0;
 		NSMutableDictionary *variables = [NSMutableDictionary dictionary];
+		NSArray *patternComponents = self.patternPathComponents;
 		BOOL isMatch = YES;
 		
-		for (NSString *patternComponent in self.patternPathComponents) {
+		if (patternContainsOptionalComponents) {
+			NSUInteger componentMismatchCount = [URLComponents count] - [self.patternPathComponents count];
+			NSUInteger optionalComponentsIndex = 0;
+			NSMutableArray *optionalComponents = [NSMutableArray array];
+			
+			while (componentMismatchCount > 0 && optionalComponentsIndex < [self.optionalComponentSequences count]) {
+				NSArray *optionalComponentSequence = self.optionalComponentSequences[optionalComponentsIndex];
+				if (componentMismatchCount >= [optionalComponentSequence count]) {
+					componentMismatchCount -= [optionalComponentSequence count];
+					[optionalComponents addObjectsFromArray:optionalComponentSequence];
+				} else {
+					break;
+				}
+				optionalComponentsIndex++;
+			}
+			
+			if (componentMismatchCount == 0) {
+				patternComponents = [patternComponents arrayByAddingObjectsFromArray:optionalComponents];
+			}
+		}
+		
+		for (NSString *patternComponent in patternComponents) {
 			NSString *URLComponent = nil;
 			if (componentIndex < [URLComponents count]) {
 				URLComponent = URLComponents[componentIndex];
@@ -112,7 +142,7 @@ static BOOL shouldDecodePlusSymbols = YES;
 				NSString *variableName = [patternComponent substringFromIndex:1];
 				NSString *variableValue = URLComponent;
 				if ([variableName length] > 0) {
-					variables[variableName] = [variableValue JLRoutes_URLDecodedString];
+					variables[variableName] = [variableValue JLRoutes_URLDecodedStringReplacingPlusSymbols:shouldDecodePlusSymbols];
 				}
 			} else if ([patternComponent isEqualToString:@"*"]) {
 				// match wildcards
@@ -377,10 +407,10 @@ static BOOL shouldDecodePlusSymbols = YES;
 	[self verboseLogWithFormat:@"Trying to route URL %@", URL];
 	BOOL didRoute = NO;
 	NSArray *routes = routesController.routes;
-	NSDictionary *queryParameters = [URL.query JLRoutes_URLParameterDictionary];
+	NSDictionary *queryParameters = [URL.query JLRoutes_URLParameterDictionaryReplacePlusSymbols:shouldDecodePlusSymbols];
 	[self verboseLogWithFormat:@"Parsed query parameters: %@", queryParameters];
 
-	NSDictionary *fragmentParameters = [URL.fragment JLRoutes_URLParameterDictionary];
+	NSDictionary *fragmentParameters = [URL.fragment JLRoutes_URLParameterDictionaryReplacePlusSymbols:shouldDecodePlusSymbols];
 	[self verboseLogWithFormat:@"Parsed fragment parameters: %@", fragmentParameters];
 
 	// break the URL down into path components and filter out any leading/trailing slashes from it

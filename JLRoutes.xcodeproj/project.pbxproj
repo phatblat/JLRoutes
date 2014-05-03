@@ -14,6 +14,8 @@
 		5D33682B16C6DC9300F983AA /* libJLRoutes.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5D33681216C6DC9300F983AA /* libJLRoutes.a */; };
 		5D33683116C6DC9300F983AA /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5D33682F16C6DC9300F983AA /* InfoPlist.strings */; };
 		5D33683416C6DC9300F983AA /* JLRoutesTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 5D33683316C6DC9300F983AA /* JLRoutesTests.m */; };
+		5DF33A311914B99200587E92 /* NSString+JLRoutesAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = 5DF33A2F1914B99200587E92 /* NSString+JLRoutesAdditions.h */; };
+		5DF33A321914B99200587E92 /* NSString+JLRoutesAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = 5DF33A301914B99200587E92 /* NSString+JLRoutesAdditions.m */; };
 		D0C20A3017061066007746A6 /* JLRoutes.h in Headers */ = {isa = PBXBuildFile; fileRef = 5D33681A16C6DC9300F983AA /* JLRoutes.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
@@ -39,6 +41,8 @@
 		5D33683216C6DC9300F983AA /* JLRoutesTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = JLRoutesTests.h; sourceTree = "<group>"; };
 		5D33683316C6DC9300F983AA /* JLRoutesTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = JLRoutesTests.m; sourceTree = "<group>"; };
 		5D33684416C6DCCC00F983AA /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		5DF33A2F1914B99200587E92 /* NSString+JLRoutesAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+JLRoutesAdditions.h"; sourceTree = "<group>"; };
+		5DF33A301914B99200587E92 /* NSString+JLRoutesAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+JLRoutesAdditions.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +101,8 @@
 			children = (
 				5D33681A16C6DC9300F983AA /* JLRoutes.h */,
 				5D33681C16C6DC9300F983AA /* JLRoutes.m */,
+				5DF33A2F1914B99200587E92 /* NSString+JLRoutesAdditions.h */,
+				5DF33A301914B99200587E92 /* NSString+JLRoutesAdditions.m */,
 			);
 			path = JLRoutes;
 			sourceTree = "<group>";
@@ -127,6 +133,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5DF33A311914B99200587E92 /* NSString+JLRoutesAdditions.h in Headers */,
 				D0C20A3017061066007746A6 /* JLRoutes.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -231,6 +238,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5D33681D16C6DC9300F983AA /* JLRoutes.m in Sources */,
+				5DF33A321914B99200587E92 /* NSString+JLRoutesAdditions.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -356,6 +364,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "";
 				INFOPLIST_FILE = "JLRoutesTests/JLRoutesTests-Info.plist";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					XCTest,
+					"-all_load",
+					"-ObjC",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -371,6 +386,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "";
 				INFOPLIST_FILE = "JLRoutesTests/JLRoutesTests-Info.plist";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					XCTest,
+					"-all_load",
+					"-ObjC",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

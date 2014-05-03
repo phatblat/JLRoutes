@@ -31,13 +31,18 @@ static NSString *const kJLRoutesGlobalNamespaceKey = @"JLRoutesGlobalNamespace";
 /// Returns a routing namespace for the given scheme
 + (instancetype)routesForScheme:(NSString *)scheme;
 
-/// Tells JLRoutes that it should manually replace '+' in parsed values to ' '. Defaults to YES.
-+ (void)setShouldDecodePlusSymbols:(BOOL)shouldDeecode;
-+ (BOOL)shouldDecodePlusSymbols;
-
 /// Registers a routePattern with default priority (0) in the receiving scheme namespace.
 + (void)addRoute:(NSString *)routePattern handler:(BOOL (^)(NSDictionary *parameters))handlerBlock;
 - (void)addRoute:(NSString *)routePattern handler:(BOOL (^)(NSDictionary *parameters))handlerBlock; // instance method
+
+/// Registers a routePattern in the global scheme namespace with a handlerBlock to call when the route pattern is matched by a URL.
+/// The block returns a BOOL representing if the handlerBlock actually handled the route or not. If
+/// a block returns NO, JLRoutes will continue trying to find a matching route.
++ (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock;
+- (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock; // instance method
+
+/// Registers a routePattern with default priority (0) using dictionary-style subscripting.
+- (void)setObject:(id)handlerBlock forKeyedSubscript:(NSString *)routePatten;
 
 /// Removes a routePattern from the receiving scheme namespace.
 + (void)removeRoute:(NSString *)routePattern;
@@ -49,15 +54,6 @@ static NSString *const kJLRoutesGlobalNamespaceKey = @"JLRoutesGlobalNamespace";
 
 /// Unregister and delete an entire scheme namespace
 + (void)unregisterRouteScheme:(NSString *)scheme;
-
-/// Registers a routePattern with default priority (0) using dictionary-style subscripting.
-- (void)setObject:(id)handlerBlock forKeyedSubscript:(NSString *)routePatten;
-
-/// Registers a routePattern in the global scheme namespace with a handlerBlock to call when the route pattern is matched by a URL.
-/// The block returns a BOOL representing if the handlerBlock actually handled the route or not. If
-/// a block returns NO, JLRoutes will continue trying to find a matching route.
-+ (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock;
-- (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock; // instance method
 
 /// Routes a URL, calling handler blocks (for patterns that match URL) until one returns YES, optionally specifying add'l parameters
 + (BOOL)routeURL:(NSURL *)URL;
@@ -75,6 +71,10 @@ static NSString *const kJLRoutesGlobalNamespaceKey = @"JLRoutesGlobalNamespace";
 
 /// Prints the entire routing table
 + (NSString *)description;
+
+/// Tells JLRoutes that it should manually replace '+' in parsed values to ' '. Defaults to YES.
++ (void)setShouldDecodePlusSymbols:(BOOL)shouldDeecode;
++ (BOOL)shouldDecodePlusSymbols;
 
 /// Allows configuration of verbose logging. Default is NO. This is mostly just helpful with debugging.
 + (void)setVerboseLoggingEnabled:(BOOL)loggingEnabled;

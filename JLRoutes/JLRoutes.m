@@ -115,8 +115,14 @@ static BOOL shouldDecodePlusSymbols = YES;
 			
 			while (componentMismatchCount > 0 && optionalComponentsIndex < [self.optionalComponentSequences count]) {
 				NSArray *optionalComponentSequence = self.optionalComponentSequences[optionalComponentsIndex];
-				if (componentMismatchCount >= [optionalComponentSequence count]) {
-					componentMismatchCount -= [optionalComponentSequence count];
+				NSUInteger sequenceComponentCount = [optionalComponentSequence count];
+				
+				if ([[optionalComponentSequence lastObject] isEqualToString:@"*"]) {
+					sequenceComponentCount--;
+				}
+				
+				if (componentMismatchCount >= sequenceComponentCount) {
+					componentMismatchCount -= sequenceComponentCount;
 					[optionalComponents addObjectsFromArray:optionalComponentSequence];
 				} else {
 					// not enough URL components to correctly fulfill the mapping of sequences, so this isn't a match

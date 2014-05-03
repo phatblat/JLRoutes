@@ -510,7 +510,7 @@ static NSDictionary *lastMatch = nil;
 	JLValidateParameter(@{@"opParam1": @"yay"});
 	JLValidateParameter(@{@"opParam2": @"boo"});
 	
-	[self route:@"optional://optional3/yay/foo/bar/boo/baz/thing/mars"];
+	[self route:@"optional://optional3/yay/foo/bar/boo/baz/thing"];
 	JLValidateNoLastMatch();
 	
 	[self route:@"optional://optional3/yay/foo/bar/boo/baz/thing/mars"];

@@ -102,13 +102,13 @@ static BOOL shouldDecodePlusSymbols = YES;
 	
 	// if valid, move into identifying a match
 	if (componentCountsEqual || routeContainsWildcard) {
-		// now that we've identified a possible match, move component by component to check if it's a match
 		NSUInteger componentIndex = 0;
 		NSMutableDictionary *variables = [NSMutableDictionary dictionary];
 		NSArray *patternComponents = self.patternPathComponents;
 		BOOL isMatch = YES;
 		
 		if (patternContainsOptionalComponents) {
+			// the pattern contains optional stuff - let's see if the sequence mapping lines up with these URL components
 			NSUInteger componentMismatchCount = [URLComponents count] - [self.patternPathComponents count];
 			NSUInteger optionalComponentsIndex = 0;
 			NSMutableArray *optionalComponents = [NSMutableArray array];
@@ -119,6 +119,7 @@ static BOOL shouldDecodePlusSymbols = YES;
 					componentMismatchCount -= [optionalComponentSequence count];
 					[optionalComponents addObjectsFromArray:optionalComponentSequence];
 				} else {
+					// not enough URL components to correctly fulfill the mapping of sequences, so this isn't a match
 					break;
 				}
 				optionalComponentsIndex++;
@@ -126,35 +127,41 @@ static BOOL shouldDecodePlusSymbols = YES;
 			
 			if (componentMismatchCount == 0) {
 				patternComponents = [patternComponents arrayByAddingObjectsFromArray:optionalComponents];
+			} else {
+				// couldn't resolve the mismatch in the above while loop - this isn't a match
+				isMatch = NO;
 			}
 		}
 		
-		for (NSString *patternComponent in patternComponents) {
-			NSString *URLComponent = nil;
-			if (componentIndex < [URLComponents count]) {
-				URLComponent = URLComponents[componentIndex];
-			} else if ([patternComponent isEqualToString:@"*"]) { // match /foo by /foo/*
-				URLComponent = [URLComponents lastObject];
-			}
-			
-			if ([patternComponent hasPrefix:@":"]) {
-				// this component is a variable
-				NSString *variableName = [patternComponent substringFromIndex:1];
-				NSString *variableValue = URLComponent;
-				if ([variableName length] > 0) {
-					variables[variableName] = [variableValue JLRoutes_URLDecodedStringReplacingPlusSymbols:shouldDecodePlusSymbols];
+		// now that we've identified a possible match, move component by component to check if it's a match
+		if (isMatch) {
+			for (NSString *patternComponent in patternComponents) {
+				NSString *URLComponent = nil;
+				if (componentIndex < [URLComponents count]) {
+					URLComponent = URLComponents[componentIndex];
+				} else if ([patternComponent isEqualToString:@"*"]) { // match /foo by /foo/*
+					URLComponent = [URLComponents lastObject];
 				}
-			} else if ([patternComponent isEqualToString:@"*"]) {
-				// match wildcards
-				variables[kJLRouteWildcardComponentsKey] = [URLComponents subarrayWithRange:NSMakeRange(componentIndex, URLComponents.count-componentIndex)];
-				isMatch = YES;
-				break;
-			} else if (![patternComponent isEqualToString:URLComponent]) {
-				// a non-variable component did not match, so this route doesn't match up - on to the next one
-				isMatch = NO;
-				break;
+				
+				if ([patternComponent hasPrefix:@":"]) {
+					// this component is a variable
+					NSString *variableName = [patternComponent substringFromIndex:1];
+					NSString *variableValue = URLComponent;
+					if ([variableName length] > 0) {
+						variables[variableName] = [variableValue JLRoutes_URLDecodedStringReplacingPlusSymbols:shouldDecodePlusSymbols];
+					}
+				} else if ([patternComponent isEqualToString:@"*"]) {
+					// match wildcards
+					variables[kJLRouteWildcardComponentsKey] = [URLComponents subarrayWithRange:NSMakeRange(componentIndex, URLComponents.count-componentIndex)];
+					isMatch = YES;
+					break;
+				} else if (![patternComponent isEqualToString:URLComponent]) {
+					// a non-variable component did not match, so this route doesn't match up - on to the next one
+					isMatch = NO;
+					break;
+				}
+				componentIndex++;
 			}
-			componentIndex++;
 		}
 		
 		if (isMatch) {

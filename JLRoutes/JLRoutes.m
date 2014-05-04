@@ -41,6 +41,7 @@ static BOOL shouldDecodePlusSymbols = YES;
 @property (nonatomic, strong) NSArray *optionalComponentSequences;
 @property (nonatomic, assign) NSUInteger optionalComponentsCount;
 
+- (void)parsePattern;
 - (NSDictionary *)parametersForURL:(NSURL *)URL components:(NSArray *)URLComponents;
 
 @end
@@ -48,43 +49,48 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 @implementation _JLRoute
 
+- (void)parsePattern
+{
+	NSString *patternString = self.pattern;
+	NSRange optionalRange = NSMakeRange(NSNotFound, NSNotFound);
+	optionalRange = [self.pattern JLRoutes_innermostRangeBetweenStartString:@"(" endString:@")"];
+	
+	if (optionalRange.location != NSNotFound) {
+		// this pattern contains optional parameter definitions
+		// for each 'sequence' of option params, store them in their own array within a wrapper array
+		//
+		// this is to handle routes like this: /test(/:optionalParam1(/:optionalParam2/foo(/:optionalParam3)))
+		// the idea is to take the above route and create this data structure:
+		// [[optionalParam1], [optionalParam2, foo], [optionalParam3]]
+		//
+		// this way we can require specific sequences (such as requiring both optionalParam2 and foo) without matching subsequent optional sections.
+		
+		NSMutableArray *optionalParamSequences = [NSMutableArray array];
+		NSMutableString *modifiedPatternString = [patternString mutableCopy];
+		
+		// loop until we run out of optional ranges (or hit a broken one)
+		while (optionalRange.location != NSNotFound) {
+			NSString *optionalSubstring = [modifiedPatternString substringWithRange:optionalRange];
+			NSArray *optionalComponents = [optionalSubstring JLRoutes_filteredPathComponents];
+			[optionalParamSequences insertObject:optionalComponents atIndex:0];
+			self.optionalComponentsCount += [optionalComponents count];
+			
+			[modifiedPatternString deleteCharactersInRange:NSMakeRange(optionalRange.location - 1, optionalRange.length + 2)];
+			optionalRange = [modifiedPatternString JLRoutes_innermostRangeBetweenStartString:@"(" endString:@")"];
+		}
+		
+		self.optionalComponentSequences = [NSArray arrayWithArray:optionalParamSequences]; // force immutability
+		patternString = [NSString stringWithString:modifiedPatternString]; // update the pattern string while also forcing immutability
+	}
+	self.patternPathComponents = [patternString JLRoutes_filteredPathComponents];
+}
+
 - (NSDictionary *)parametersForURL:(NSURL *)URL components:(NSArray *)URLComponents
 {
 	NSDictionary *routeParameters = nil;
 	
 	if (!self.patternPathComponents) {
-		NSString *patternString = self.pattern;
-		NSRange optionalRange = NSMakeRange(NSNotFound, NSNotFound);
-		optionalRange = [self.pattern JLRoutes_innermostRangeBetweenStartString:@"(" endString:@")"];
-		
-		if (optionalRange.location != NSNotFound) {
-			// this pattern contains optional parameter definitions
-			// for each 'sequence' of option params, store them in their own array within a wrapper array
-			//
-			// this is to handle routes like this: /test(/:optionalParam1(/:optionalParam2/foo(/:optionalParam3)))
-			// the idea is to take the above route and create this data structure:
-			// [[optionalParam1], [optionalParam2, foo], [optionalParam3]]
-			//
-			// this way we can require specific sequences (such as requiring both optionalParam2 and foo) without matching subsequent optional sections.
-			
-			NSMutableArray *optionalParamSequences = [NSMutableArray array];
-			NSMutableString *modifiedPatternString = [patternString mutableCopy];
-			
-			// loop until we run out of optional ranges (or hit a broken one)
-			while (optionalRange.location != NSNotFound) {
-				NSString *optionalSubstring = [modifiedPatternString substringWithRange:optionalRange];
-				NSArray *optionalComponents = [optionalSubstring JLRoutes_filteredPathComponents];
-				[optionalParamSequences insertObject:optionalComponents atIndex:0];
-				self.optionalComponentsCount += [optionalComponents count];
-				
-				[modifiedPatternString deleteCharactersInRange:NSMakeRange(optionalRange.location - 1, optionalRange.length + 2)];
-				optionalRange = [modifiedPatternString JLRoutes_innermostRangeBetweenStartString:@"(" endString:@")"];
-			}
-			
-			self.optionalComponentSequences = [NSArray arrayWithArray:optionalParamSequences]; // force immutability
-			patternString = [NSString stringWithString:modifiedPatternString]; // update the pattern string while also forcing immutability
-		}
-		self.patternPathComponents = [patternString JLRoutes_filteredPathComponents];
+		[self parsePattern];
 	}
 	
 	// gather facts
@@ -184,7 +190,7 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 - (NSString *)description
 {
-	return [NSString stringWithFormat:@"JLRoute %@ (%@)", self.pattern, @(self.priority)];
+	return [NSString stringWithFormat:@"JLRoute %@:/%@ (priority %@)", ([self.parentRoutesController.namespaceKey isEqualToString:kJLRoutesGlobalNamespaceKey] ? @"global" : self.parentRoutesController.namespaceKey), self.pattern, @(self.priority)];
 }
 
 @end
@@ -207,7 +213,7 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 + (NSString *)description
 {
-	NSMutableString *descriptionString = [NSMutableString stringWithString:@"\n"];
+	NSMutableString *descriptionString = [NSMutableString stringWithString:@"JLRoutes \n"];
 	
 	for (NSString *routesNamespace in routeControllersMap) {
 		JLRoutes *routesController = routeControllersMap[routesNamespace];

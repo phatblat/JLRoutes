@@ -200,6 +200,25 @@ static BOOL shouldDecodePlusSymbols = YES;
 	return self;
 }
 
+- (NSString *)description
+{
+	return [self.routes description];
+}
+
++ (NSString *)description
+{
+	NSMutableString *descriptionString = [NSMutableString stringWithString:@"\n"];
+	
+	for (NSString *routesNamespace in routeControllersMap) {
+		JLRoutes *routesController = routeControllersMap[routesNamespace];
+		[descriptionString appendFormat:@"\"%@\":\n%@\n\n", routesController.namespaceKey, routesController.routes];
+	}
+	
+	return descriptionString;
+}
+
+#pragma mark - Settings
+
 + (void)setShouldDecodePlusSymbols:(BOOL)shouldDecode
 {
 	shouldDecodePlusSymbols = shouldDecode;
@@ -210,8 +229,17 @@ static BOOL shouldDecodePlusSymbols = YES;
 	return shouldDecodePlusSymbols;
 }
 
-#pragma mark -
-#pragma mark Routing API
++ (void)setVerboseLoggingEnabled:(BOOL)loggingEnabled
+{
+	verboseLoggingEnabled = loggingEnabled;
+}
+
++ (BOOL)isVerboseLoggingEnabled
+{
+	return verboseLoggingEnabled;
+}
+
+#pragma mark - Routing API
 
 + (instancetype)globalRoutes
 {
@@ -404,38 +432,14 @@ static BOOL shouldDecodePlusSymbols = YES;
 	return [[self class] routeURL:URL withController:self parameters:parameters executeBlock:NO];
 }
 
-#pragma mark -
-#pragma mark Debugging Aids
+#pragma mark - Subscripting
 
-- (NSString *)description
+- (void)setObject:(id)handlerBlock forKeyedSubscript:(NSString *)routePatten
 {
-	return [self.routes description];
+	[self addRoute:routePatten handler:handlerBlock];
 }
 
-+ (NSString *)description
-{
-	NSMutableString *descriptionString = [NSMutableString stringWithString:@"\n"];
-	
-	for (NSString *routesNamespace in routeControllersMap) {
-		JLRoutes *routesController = routeControllersMap[routesNamespace];
-		[descriptionString appendFormat:@"\"%@\":\n%@\n\n", routesController.namespaceKey, routesController.routes];
-	}
-	
-	return descriptionString;
-}
-
-+ (void)setVerboseLoggingEnabled:(BOOL)loggingEnabled
-{
-	verboseLoggingEnabled = loggingEnabled;
-}
-
-+ (BOOL)isVerboseLoggingEnabled
-{
-	return verboseLoggingEnabled;
-}
-
-#pragma mark -
-#pragma mark Internal API
+#pragma mark - SPI
 
 + (BOOL)routeURL:(NSURL *)URL withController:(JLRoutes *)routesController
 {
@@ -534,14 +538,6 @@ static BOOL shouldDecodePlusSymbols = YES;
 		va_end(argsList);
 		NSLog(@"[JLRoutes]: %@", formattedLogMessage);
 	}
-}
-
-#pragma mark -
-#pragma mark Subscripting
-
-- (void)setObject:(id)handlerBlock forKeyedSubscript:(NSString *)routePatten
-{
-  [self addRoute:routePatten handler:handlerBlock];
 }
 
 @end

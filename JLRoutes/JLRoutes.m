@@ -41,13 +41,25 @@ static BOOL shouldDecodePlusSymbols = YES;
 @property (nonatomic, strong) NSArray *optionalComponentSequences;
 @property (nonatomic, assign) NSUInteger optionalComponentsCount;
 
-- (void)parsePattern;
+- (instancetype)initWithPattern:(NSString *)pattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *))handlerBlock;
 - (NSDictionary *)parametersForURL:(NSURL *)URL components:(NSArray *)URLComponents;
+- (void)parsePattern;
 
 @end
 
 
 @implementation _JLRoute
+
+- (instancetype)initWithPattern:(NSString *)pattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *))handlerBlock
+{
+	if ((self = [super init])) {
+		self.block = handlerBlock;
+		self.priority = priority;
+		self.pattern = pattern;
+		[self parsePattern];
+	}
+	return self;
+}
 
 - (void)parsePattern
 {
@@ -254,6 +266,8 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 + (instancetype)routesForScheme:(NSString *)scheme
 {
+	NSParameterAssert(scheme != nil);
+	
 	JLRoutes *routesController = nil;
 	
 	static dispatch_once_t onceToken;
@@ -310,10 +324,9 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 - (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock
 {
-	_JLRoute *route = [[_JLRoute alloc] init];
-	route.pattern = routePattern;
-	route.priority = priority;
-	route.block = [handlerBlock copy];
+	NSParameterAssert(routePattern != nil);
+	
+	_JLRoute *route = [[_JLRoute alloc] initWithPattern:routePattern priority:priority handler:handlerBlock];
 	route.parentRoutesController = self;
 	
 	if (!route.block) {
@@ -351,6 +364,8 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 - (void)removeRoute:(NSString *)routePattern
 {
+	NSParameterAssert(routePattern != nil);
+	
 	if (![routePattern hasPrefix:@"/"]) {
 		routePattern = [NSString stringWithFormat:@"/%@", routePattern];
 	}
@@ -383,6 +398,8 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 + (void)unregisterRouteScheme:(NSString *)scheme
 {
+	NSParameterAssert(scheme != nil);
+	
 	[routeControllersMap removeObjectForKey:scheme];
 }
 
@@ -408,6 +425,8 @@ static BOOL shouldDecodePlusSymbols = YES;
 
 + (BOOL)routeURL:(NSURL *)URL withParameters:(NSDictionary *)parameters executeRouteBlock:(BOOL)execute
 {
+	NSParameterAssert(URL != nil);
+	
 	if (!URL) {
 		return NO;
 	}

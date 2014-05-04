@@ -111,9 +111,6 @@ static NSDictionary *lastMatch = nil;
 	[JLRoutes addRoute:@"/xyz/wildcard/*" handler:self.defaultHandler];
 	[JLRoutes addRoute:@"/route/:param/*" handler:self.defaultHandler];
 	
-	[self route:nil];
-	JLValidateNoLastMatch();
-	
 	[self route:@"tests:/"];
 	JLValidateAnyRouteMatched();
 	JLValidatePattern(@"/");

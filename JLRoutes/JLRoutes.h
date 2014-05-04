@@ -35,11 +35,17 @@ static NSString *const kJLRoutesGlobalNamespaceKey = @"JLRoutesGlobalNamespace";
 + (void)addRoute:(NSString *)routePattern handler:(BOOL (^)(NSDictionary *parameters))handlerBlock;
 - (void)addRoute:(NSString *)routePattern handler:(BOOL (^)(NSDictionary *parameters))handlerBlock; // instance method
 
-/// Registers a routePattern in the global scheme namespace with a handlerBlock to call when the route pattern is matched by a URL.
-/// The block returns a BOOL representing if the handlerBlock actually handled the route or not. If
-/// a block returns NO, JLRoutes will continue trying to find a matching route.
+/// Registers a single handlerBlock for multiple routes
++ (void)addRoutes:(NSArray *)routePatterns handler:(BOOL (^)(NSDictionary *parameters))handlerBlock;
+- (void)addRoutes:(NSArray *)routePatterns handler:(BOOL (^)(NSDictionary *parameters))handlerBlock;
+
+/// Registers a routePattern in the current namespace with a priority (default: 0) and a handler.
 + (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock;
 - (void)addRoute:(NSString *)routePattern priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock; // instance method
+
+/// Registers a single handlerBlock for multiple routes with a single given priority.
++ (void)addRoutes:(NSArray *)routePatterns priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock;
+- (void)addRoutes:(NSArray *)routePatterns priority:(NSUInteger)priority handler:(BOOL (^)(NSDictionary *parameters))handlerBlock;
 
 /// Registers a routePattern with default priority (0) using dictionary-style subscripting.
 - (void)setObject:(id)handlerBlock forKeyedSubscript:(NSString *)routePatten;

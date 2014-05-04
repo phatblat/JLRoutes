@@ -92,7 +92,7 @@ static BOOL shouldDecodePlusSymbols = YES;
 		}
 		
 		self.optionalComponentSequences = [NSArray arrayWithArray:optionalParamSequences]; // force immutability
-		patternString = [NSString stringWithString:modifiedPatternString]; // update the pattern string while also forcing immutability
+		patternString = modifiedPatternString;
 	}
 	self.patternPathComponents = [patternString JLRoutes_filteredPathComponents];
 }
